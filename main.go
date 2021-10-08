@@ -15,6 +15,8 @@ func main() {
 	}
 	defer glfw.Terminate()
 
+	readConfig("configs/test.yaml")
+
 	Init()
 	for {
 		glfw.PollEvents()

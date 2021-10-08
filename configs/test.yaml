@@ -1,0 +1,12 @@
+controllers:
+    joystick0:
+        - BUTTON_A
+        - BUTTON_B
+        - BUTTON_X
+        - BUTTON_Y
+
+    joystick1:
+        - BUTTON_DPAD_UP
+        - BUTTON_DPAD_RIGHT
+        - BUTTON_DPAD_DOWN
+        - BUTTON_DPAD_LEFT
