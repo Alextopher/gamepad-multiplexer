@@ -7,16 +7,24 @@ import (
 	"github.com/go-gl/glfw/v3.3/glfw"
 )
 
-func joystick() {
-  // clear state
-	joy := glfw.Joystick(glfw.Joystick1)
-  log.Println(joy)
 
+func getJoysticks() (joys []glfw.Joystick) {
+  for i := 0; i < 16; i++ {
+    joy := glfw.Joystick(i)
+    if joy.Present() {
+      joys = append(joys, joy)
+    }
+  }
+  return
+}
+
+func joystick(joy *glfw.Joystick) {
 	axes := joy.GetAxes()
 	buttons := joy.GetButtons()
 
   log.Println(axes)
   log.Println(buttons)
+  log.Println(joy.Present(), joy.IsGamepad(), joy.GetGUID())
 }
 
 func init() {
@@ -32,5 +40,8 @@ func main() {
 	}
 	defer glfw.Terminate()
 
-  joystick()
+  joys := getJoysticks()
+  for _, joy := range joys {
+    joystick(&joy)
+  }
 }
