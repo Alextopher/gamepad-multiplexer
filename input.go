@@ -29,10 +29,9 @@ func Init() {
 	if err != nil {
 		log.Panic("Could not read contents of gamecontrollerdb.txt", err)
 	}
-
-	glfw.SetJoystickCallback(joystickCallbacks)
 	glfw.UpdateGamepadMappings(string(content))
 
+	glfw.SetJoystickCallback(joystickCallbacks)
 	for i := 0; i < 16; i++ {
 		joysticks[i] = glfw.Joystick(i)
 	}
