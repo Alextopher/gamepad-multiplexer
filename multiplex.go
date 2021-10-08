@@ -9,12 +9,14 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-var rules map[glfw.Joystick][]multiplexRule
+const DEADZONE float32 = 0.20
+
+var rules map[int][]multiplexRule
 
 type multiplexRule struct {
-	rule_type int
-	button    glfw.GamepadButton
-	axis      glfw.GamepadAxis
+	Type   int
+	Button glfw.GamepadButton
+	Axis   glfw.GamepadAxis
 }
 
 const (
@@ -24,6 +26,14 @@ const (
 
 type Config struct {
 	Controllers map[string][]string `yaml:"controllers"`
+}
+
+func abs32(f float32) float32 {
+	if f < 0 {
+		return -f
+	} else {
+		return f
+	}
 }
 
 func stringToRule(rule string) multiplexRule {
@@ -93,14 +103,56 @@ func readConfig(filename string) {
 		panic(err)
 	}
 
-	rules = make(map[glfw.Joystick][]multiplexRule)
+	rules = make(map[int][]multiplexRule)
 	for joystick, newRules := range config.Controllers {
 		// `joystick0` <- get last character as int
 		id := glfw.Joystick(joystick[len(joystick)-1] - '0')
 
-		rules[id] = make([]multiplexRule, len(newRules))
+		rules[int(id)] = make([]multiplexRule, len(newRules))
 		for i, rule := range newRules {
-			rules[id][i] = stringToRule(rule)
+			rules[int(id)][i] = stringToRule(rule)
+		}
+	}
+}
+
+func multiplex(states map[int]glfw.GamepadState, multiplexed *glfw.GamepadState) {
+	// totals to calculate average
+	axes_n := []float32{0, 0, 0, 0, 0, 0}
+	multiplexed.Buttons = [15]glfw.Action{glfw.Release}
+
+	for id, state := range states {
+		if rules[id] == nil {
+			continue
+		}
+
+		// Apply rules
+		for _, rule := range rules[id] {
+			switch rule.Type {
+			case Button:
+				// If anyone is pressing the button, then it is pressed
+				if multiplexed.Buttons[rule.Button] == glfw.Press || state.Buttons[rule.Button] == glfw.Press {
+					multiplexed.Buttons[rule.Button] = glfw.Press
+				} else {
+					multiplexed.Buttons[rule.Button] = glfw.Release
+				}
+			case Axis:
+				// Axes get put through a deadzone filter then averaged
+				// This way if player 1 and player are moving opposite they will cancel
+				// However player 1 not moving and player 2 moving won't result in half speed
+				if abs32(state.Axes[rule.Axis]) > DEADZONE {
+					multiplexed.Axes[rule.Axis] += state.Axes[rule.Axis]
+					axes_n[rule.Axis] += 1
+				}
+			}
+		}
+	}
+
+	// Average the axes
+	for i := 0; i < 6; i++ {
+		if axes_n[i] == 0 {
+			multiplexed.Axes[i] = 0
+		} else {
+			multiplexed.Axes[i] = multiplexed.Axes[i] / axes_n[i]
 		}
 	}
 }

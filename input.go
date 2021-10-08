@@ -24,7 +24,7 @@ func joystickCallbacks(joy glfw.Joystick, event glfw.PeripheralEvent) {
 	}
 }
 
-func Init() {
+func joysticksInit() [16]glfw.Joystick {
 	content, err := ioutil.ReadFile("gamecontrollerdb.txt")
 	if err != nil {
 		log.Panic("Could not read contents of gamecontrollerdb.txt", err)
@@ -35,4 +35,6 @@ func Init() {
 	for i := 0; i < 16; i++ {
 		joysticks[i] = glfw.Joystick(i)
 	}
+
+	return joysticks
 }
