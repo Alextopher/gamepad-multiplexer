@@ -11,8 +11,8 @@ Work in progress gamepad multiplexer. Allows multiple players to control the sam
 - [x] multiplex gamepad data to single virtual gamepad
 - [ ] map multiplexed gamepad to keyboard and mouse events
 - [ ] output keyboard events to the OS
-- [ ] create a server to receive button presses
-- [ ] create a client to send button presses
+- [x] create a server to receive button presses
+- [x] create a client to send button presses
 
 ## Valid rules:
 ```
@@ -31,10 +31,6 @@ BUTTON_DPAD_UP
 BUTTON_DPAD_RIGHT
 BUTTON_DPAD_DOWN
 BUTTON_DPAD_LEFT
-BUTTON_CROSS - BUTTON_A
-BUTTON_CIRCLE - BUTTON_B
-BUTTON_SQUARE - BUTTON_X
-BUTTON_TRIANGLE - BUTTON_Y
 
 AXIS_LEFT_X
 AXIS_LEFT_Y
@@ -42,4 +38,10 @@ AXIS_RIGHT_X
 AXIS_RIGHT_Y
 AXIS_LEFT_TRIGGER
 AXIS_RIGHT_TRIGGER
+
+### Note these map to the other corresponding inputs
+BUTTON_CROSS - BUTTON_A
+BUTTON_CIRCLE - BUTTON_B
+BUTTON_SQUARE - BUTTON_X
+BUTTON_TRIANGLE - BUTTON_Y
 ```

@@ -4,14 +4,17 @@ import (
 	"errors"
 	"github.com/go-gl/glfw/v3.3/glfw"
 	"net"
+	"time"
 )
+
+const Interval time.Duration = 100 * time.Millisecond
 
 type Packet struct {
 	PacketId     uint32
 	JoystickId   uint8
 	GamepadState glfw.GamepadState
-	LAddr        *net.UDPAddr
-	RAddr        *net.UDPAddr
+	LAddr        net.Addr
+	RAddr        net.Addr
 }
 
 // Parse the data from the packet and convert to valid struct
