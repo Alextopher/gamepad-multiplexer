@@ -36,21 +36,21 @@ func abs32(f float32) float32 {
 
 func stringToRule(rule string) multiplexRule {
 	switch rule {
-	case "BUTTON_A":
-		fallthrough
 	case "BUTTON_CROSS":
+		fallthrough
+	case "BUTTON_A":
 		return multiplexRule{Button, glfw.ButtonA, 0}
-	case "BUTTON_B":
-		fallthrough
 	case "BUTTON_CIRCLE":
+		fallthrough
+	case "BUTTON_B":
 		return multiplexRule{Button, glfw.ButtonB, 0}
-	case "BUTTON_X":
-		fallthrough
 	case "BUTTON_SQUARE":
-		return multiplexRule{Button, glfw.ButtonX, 0}
-	case "BUTTON_Y":
 		fallthrough
+	case "BUTTON_X":
+		return multiplexRule{Button, glfw.ButtonX, 0}
 	case "BUTTON_TRIANGLE":
+		fallthrough
+	case "BUTTON_Y":
 		return multiplexRule{Button, glfw.ButtonY, 0}
 	case "BUTTON_LEFT_BUMPER":
 		return multiplexRule{Button, glfw.ButtonLeftBumper, 0}
@@ -101,11 +101,9 @@ func readConfig(filename string) {
 	}
 
 	var config Config
-
 	err = yaml.Unmarshal(yamlFile, &config)
 	if err != nil {
-		// TODO Don't panic
-		panic(err)
+		log.Fatalln("Failed to read config file due to error:", err)
 	}
 
 	rules = make(map[int][]multiplexRule)
@@ -122,7 +120,8 @@ func readConfig(filename string) {
 
 func multiplex(states map[int]glfw.GamepadState) (multiplexed glfw.GamepadState) {
 	// totals to calculate average
-	axesN := []float32{0, 0, 0, 0, 0, 0}
+	axesUsed := []float32{0, 0, 0, 0, 0, 0}
+	multiplexed.Axes = [6]float32{0, 0, 0, 0, 0, 0}
 	multiplexed.Buttons = [15]glfw.Action{glfw.Release}
 
 	for id, state := range states {
@@ -135,18 +134,14 @@ func multiplex(states map[int]glfw.GamepadState) (multiplexed glfw.GamepadState)
 			switch rule.Type {
 			case Button:
 				// If anyone is pressing the button, then it is pressed
-				if multiplexed.Buttons[rule.Button] == glfw.Press || state.Buttons[rule.Button] == glfw.Press {
-					multiplexed.Buttons[rule.Button] = glfw.Press
-				} else {
-					multiplexed.Buttons[rule.Button] = glfw.Release
-				}
+				multiplexed.Buttons[rule.Button] |= state.Buttons[rule.Button]
 			case Axis:
 				// Axes get put through a deadzone filter then averaged
 				// This way if player 1 and player are moving opposite they will cancel
 				// However player 1 not moving and player 2 moving won't result in half speed
 				if abs32(state.Axes[rule.Axis]) > DEADZONE {
 					multiplexed.Axes[rule.Axis] += state.Axes[rule.Axis]
-					axesN[rule.Axis] += 1
+					axesUsed[rule.Axis] += 1
 				}
 			}
 		}
@@ -154,10 +149,10 @@ func multiplex(states map[int]glfw.GamepadState) (multiplexed glfw.GamepadState)
 
 	// Average the axes
 	for i := 0; i < 6; i++ {
-		if axesN[i] == 0 {
+		if axesUsed[i] == 0 {
 			multiplexed.Axes[i] = 0
 		} else {
-			multiplexed.Axes[i] = multiplexed.Axes[i] / axesN[i]
+			multiplexed.Axes[i] = multiplexed.Axes[i] / axesUsed[i]
 		}
 	}
 	return multiplexed
