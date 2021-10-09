@@ -7,8 +7,6 @@ import (
 	"github.com/go-gl/glfw/v3.3/glfw"
 )
 
-var joysticks [16]glfw.Joystick
-
 // Sets up handlers for joystick connect & disconnect
 func joystickCallbacks(joy glfw.Joystick, event glfw.PeripheralEvent) {
 	if event == glfw.Connected {
@@ -24,7 +22,7 @@ func joystickCallbacks(joy glfw.Joystick, event glfw.PeripheralEvent) {
 	}
 }
 
-func joysticksInit() [16]glfw.Joystick {
+func joysticksInit() (joysticks [16]glfw.Joystick) {
 	content, err := ioutil.ReadFile("gamecontrollerdb.txt")
 	if err != nil {
 		log.Panic("Could not read contents of gamecontrollerdb.txt", err)

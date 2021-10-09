@@ -19,13 +19,12 @@ func main() {
 	readConfig("configs/test.yaml")
 	states := make(map[int]glfw.GamepadState)
 	joysticks := joysticksInit()
-	multiplexed := glfw.GamepadState{}
 
 	for {
 		glfw.PollEvents()
 		states[0] = *joysticks[0].GetGamepadState()
-		multiplex(states, &multiplexed)
-		log.Print(multiplexed)
+		multiplexed := multiplex(states)
+		log.Println(multiplexed)
 		time.Sleep(100 * time.Millisecond)
 	}
 }

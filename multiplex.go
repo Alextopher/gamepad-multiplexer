@@ -1,12 +1,10 @@
 package main
 
 import (
-	"io/ioutil"
-	"log"
-	"os"
-
 	"github.com/go-gl/glfw/v3.3/glfw"
 	"gopkg.in/yaml.v2"
+	"io/ioutil"
+	"log"
 )
 
 const DEADZONE float32 = 0.20
@@ -37,53 +35,60 @@ func abs32(f float32) float32 {
 }
 
 func stringToRule(rule string) multiplexRule {
-	switch {
-	case rule == "BUTTON_A" || rule == "BUTTON_CROSS":
+	switch rule {
+	case "BUTTON_A":
+		fallthrough
+	case "BUTTON_CROSS":
 		return multiplexRule{Button, glfw.ButtonA, 0}
-	case rule == "BUTTON_B" || rule == "BUTTON_CIRCLE":
+	case "BUTTON_B":
+		fallthrough
+	case "BUTTON_CIRCLE":
 		return multiplexRule{Button, glfw.ButtonB, 0}
-	case rule == "BUTTON_X" || rule == "BUTTON_SQUARE":
+	case "BUTTON_X":
+		fallthrough
+	case "BUTTON_SQUARE":
 		return multiplexRule{Button, glfw.ButtonX, 0}
-	case rule == "BUTTON_Y" || rule == "BUTTON_TRIANGLE":
+	case "BUTTON_Y":
+		fallthrough
+	case "BUTTON_TRIANGLE":
 		return multiplexRule{Button, glfw.ButtonY, 0}
-	case rule == "BUTTON_LEFT_BUMPER":
+	case "BUTTON_LEFT_BUMPER":
 		return multiplexRule{Button, glfw.ButtonLeftBumper, 0}
-	case rule == "BUTTON_RIGHT_BUMPER":
+	case "BUTTON_RIGHT_BUMPER":
 		return multiplexRule{Button, glfw.ButtonRightBumper, 0}
-	case rule == "BUTTON_BACK":
+	case "BUTTON_BACK":
 		return multiplexRule{Button, glfw.ButtonBack, 0}
-	case rule == "BUTTON_START":
+	case "BUTTON_START":
 		return multiplexRule{Button, glfw.ButtonStart, 0}
-	case rule == "BUTTON_GUIDE":
+	case "BUTTON_GUIDE":
 		return multiplexRule{Button, glfw.ButtonGuide, 0}
-	case rule == "BUTTON_LEFT_THUMB":
+	case "BUTTON_LEFT_THUMB":
 		return multiplexRule{Button, glfw.ButtonLeftThumb, 0}
-	case rule == "BUTTON_RIGHT_THUMB":
+	case "BUTTON_RIGHT_THUMB":
 		return multiplexRule{Button, glfw.ButtonRightThumb, 0}
-	case rule == "BUTTON_DPAD_UP":
+	case "BUTTON_DPAD_UP":
 		return multiplexRule{Button, glfw.ButtonDpadUp, 0}
-	case rule == "BUTTON_DPAD_RIGHT":
+	case "BUTTON_DPAD_RIGHT":
 		return multiplexRule{Button, glfw.ButtonDpadRight, 0}
-	case rule == "BUTTON_DPAD_DOWN":
+	case "BUTTON_DPAD_DOWN":
 		return multiplexRule{Button, glfw.ButtonDpadDown, 0}
-	case rule == "BUTTON_DPAD_LEFT":
+	case "BUTTON_DPAD_LEFT":
 		return multiplexRule{Button, glfw.ButtonDpadLeft, 0}
-	case rule == "AXIS_LEFT_X":
+	case "AXIS_LEFT_X":
 		return multiplexRule{Axis, 0, glfw.AxisLeftX}
-	case rule == "AXIS_LEFT_Y":
+	case "AXIS_LEFT_Y":
 		return multiplexRule{Axis, 0, glfw.AxisLeftY}
-	case rule == "AXIS_RIGHT_X":
+	case "AXIS_RIGHT_X":
 		return multiplexRule{Axis, 0, glfw.AxisRightX}
-	case rule == "AXIS_RIGHT_Y":
+	case "AXIS_RIGHT_Y":
 		return multiplexRule{Axis, 0, glfw.AxisRightY}
-	case rule == "AXIS_LEFT_TRIGGER":
+	case "AXIS_LEFT_TRIGGER":
 		return multiplexRule{Axis, 0, glfw.AxisLeftTrigger}
-	case rule == "AXIS_RIGHT_TRIGGER":
+	case "AXIS_RIGHT_TRIGGER":
 		return multiplexRule{Axis, 0, glfw.AxisRightTrigger}
 	}
 
 	log.Fatalf("Unrecognized rule %s!\n", rule)
-	os.Exit(1)
 	return multiplexRule{}
 }
 
@@ -115,9 +120,9 @@ func readConfig(filename string) {
 	}
 }
 
-func multiplex(states map[int]glfw.GamepadState, multiplexed *glfw.GamepadState) {
+func multiplex(states map[int]glfw.GamepadState) (multiplexed glfw.GamepadState) {
 	// totals to calculate average
-	axes_n := []float32{0, 0, 0, 0, 0, 0}
+	axesN := []float32{0, 0, 0, 0, 0, 0}
 	multiplexed.Buttons = [15]glfw.Action{glfw.Release}
 
 	for id, state := range states {
@@ -141,7 +146,7 @@ func multiplex(states map[int]glfw.GamepadState, multiplexed *glfw.GamepadState)
 				// However player 1 not moving and player 2 moving won't result in half speed
 				if abs32(state.Axes[rule.Axis]) > DEADZONE {
 					multiplexed.Axes[rule.Axis] += state.Axes[rule.Axis]
-					axes_n[rule.Axis] += 1
+					axesN[rule.Axis] += 1
 				}
 			}
 		}
@@ -149,10 +154,11 @@ func multiplex(states map[int]glfw.GamepadState, multiplexed *glfw.GamepadState)
 
 	// Average the axes
 	for i := 0; i < 6; i++ {
-		if axes_n[i] == 0 {
+		if axesN[i] == 0 {
 			multiplexed.Axes[i] = 0
 		} else {
-			multiplexed.Axes[i] = multiplexed.Axes[i] / axes_n[i]
+			multiplexed.Axes[i] = multiplexed.Axes[i] / axesN[i]
 		}
 	}
+	return multiplexed
 }
