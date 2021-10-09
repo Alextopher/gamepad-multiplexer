@@ -32,7 +32,6 @@ func main() {
 
 		for {
 			glfw.PollEvents()
-			gamepadStates[0] = *joysticks[0].GetGamepadState()
 			multiplexed := multiplex(gamepadStates)
 			if cli.Verbose {
 				log.Println(multiplexed)
@@ -49,7 +48,9 @@ func main() {
 			glfw.PollEvents()
 			// Get joystick states
 			for i, joy := range joysticks {
-				gamepadStates[uint8(i)] = *joy.GetGamepadState()
+				if joy.Present() {
+					gamepadStates[uint8(i)] = *joy.GetGamepadState()
+				}
 			}
 			// Multiplex the states
 			multiplexed := multiplex(gamepadStates)
@@ -63,10 +64,12 @@ func main() {
 				JoystickId:   0,
 				GamepadState: multiplexed,
 			}
+			// Update the packet count
+			count++
 
 			// Send the packet to the server
 			go func() {
-				_, err := conn.WriteTo(pkt.Bytes(), conn.RemoteAddr())
+				_, err := conn.Write(pkt.Bytes())
 				if err != nil {
 					log.Fatalln("Failed to send packet due to error:", err)
 				}

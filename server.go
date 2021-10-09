@@ -25,7 +25,8 @@ func listen(host string, port uint16) {
 	// Accept connections as they come in
 	for {
 		// Create a buffer
-		buf := make([]byte, 128)
+		buf := make([]byte, 31)
+
 		// Read in the data from the packet
 		_, raddr, err := conn.ReadFromUDP(buf)
 		if err != nil {

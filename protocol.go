@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"github.com/go-gl/glfw/v3.3/glfw"
+	"math"
 	"net"
 	"time"
 )
@@ -49,7 +50,7 @@ func (p *Packet) Parse(data []byte) error {
 			pos++
 		}
 		// Convert to float32
-		p.GamepadState.Axes[i] = float32(n)
+		p.GamepadState.Axes[i] = math.Float32frombits(n)
 	}
 
 	return nil
@@ -78,7 +79,7 @@ func (p Packet) Bytes() []byte {
 	pos += 2
 
 	for i := 0; i < 6; i++ {
-		var n uint32 = uint32(p.GamepadState.Axes[i])
+		n := math.Float32bits(p.GamepadState.Axes[i])
 		for j := 0; j < 4; j++ {
 			b[pos] = byte((n >> (8 * (3 - j))) & 255)
 			pos++
