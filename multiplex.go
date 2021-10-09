@@ -1,13 +1,14 @@
 package main
 
 import (
-	"github.com/go-gl/glfw/v3.3/glfw"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"log"
+
+	"github.com/go-gl/glfw/v3.3/glfw"
+	"gopkg.in/yaml.v2"
 )
 
-const DEADZONE float32 = 0.20
+const DEADZONE float32 = 0.15
 
 var rules map[uint8][]multiplexRule
 
@@ -139,20 +140,35 @@ func multiplex(states map[uint8]glfw.GamepadState) (multiplexed glfw.GamepadStat
 				// Axes get put through a deadzone filter then averaged
 				// This way if player 1 and player are moving opposite they will cancel
 				// However player 1 not moving and player 2 moving won't result in half speed
-				if abs32(state.Axes[rule.Axis]) > DEADZONE {
-					multiplexed.Axes[rule.Axis] += state.Axes[rule.Axis]
+				if rule.Axis == glfw.AxisLeftTrigger || rule.Axis == glfw.AxisRightTrigger {
+					// Triggers rest at -1
+					if state.Axes[rule.Axis] > -1+DEADZONE {
+						multiplexed.Axes[rule.Axis] += state.Axes[rule.Axis]
+					} else {
+						multiplexed.Axes[rule.Axis] += -1
+					}
 					axesUsed[rule.Axis] += 1
+				} else {
+					// Joysticks rest at 0
+					if abs32(state.Axes[rule.Axis]) > DEADZONE {
+						multiplexed.Axes[rule.Axis] += state.Axes[rule.Axis]
+						axesUsed[rule.Axis] += 1
+					}
 				}
 			}
 		}
 	}
 
 	// Average the axes
-	for i := 0; i < 6; i++ {
-		if axesUsed[i] == 0 {
-			multiplexed.Axes[i] = 0
+	for axis := 0; axis < 6; axis++ {
+		if axesUsed[axis] == 0 {
+			if axis == int(glfw.AxisLeftTrigger) || axis == int(glfw.AxisRightTrigger) {
+				multiplexed.Axes[axis] = -1
+			} else {
+				multiplexed.Axes[axis] = 0
+			}
 		} else {
-			multiplexed.Axes[i] = multiplexed.Axes[i] / axesUsed[i]
+			multiplexed.Axes[axis] = multiplexed.Axes[axis] / axesUsed[axis]
 		}
 	}
 	return multiplexed
