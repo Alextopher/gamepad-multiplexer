@@ -9,7 +9,7 @@ import (
 
 const DEADZONE float32 = 0.20
 
-var rules map[int][]multiplexRule
+var rules map[uint8][]multiplexRule
 
 type multiplexRule struct {
 	Type   int
@@ -106,19 +106,19 @@ func readConfig(filename string) {
 		log.Fatalln("Failed to read config file due to error:", err)
 	}
 
-	rules = make(map[int][]multiplexRule)
+	rules = make(map[uint8][]multiplexRule)
 	for joystick, newRules := range config.Controllers {
 		// `joystick0` <- get last character as int
 		id := glfw.Joystick(joystick[len(joystick)-1] - '0')
 
-		rules[int(id)] = make([]multiplexRule, len(newRules))
+		rules[uint8(id)] = make([]multiplexRule, len(newRules))
 		for i, rule := range newRules {
-			rules[int(id)][i] = stringToRule(rule)
+			rules[uint8(id)][i] = stringToRule(rule)
 		}
 	}
 }
 
-func multiplex(states map[int]glfw.GamepadState) (multiplexed glfw.GamepadState) {
+func multiplex(states map[uint8]glfw.GamepadState) (multiplexed glfw.GamepadState) {
 	// totals to calculate average
 	axesUsed := []float32{0, 0, 0, 0, 0, 0}
 	multiplexed.Axes = [6]float32{0, 0, 0, 0, 0, 0}

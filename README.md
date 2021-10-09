@@ -6,11 +6,13 @@ Work in progress gamepad multiplexer. Allows multiple players to control the sam
 
 - [x] connect & disconnect controllers
 - [x] detect gamepad
-- [ ] read buttons and axis state from gamepads
+- [x] read buttons and axis state from gamepads
 - [x] parse rules from yaml file
-- [ ] multiplex gamepad data to single virtual gamepad
+- [x] multiplex gamepad data to single virtual gamepad
 - [ ] map multiplexed gamepad to keyboard and mouse events
 - [ ] output keyboard events to the OS
+- [ ] create a server to receive button presses
+- [ ] create a client to send button presses
 
 ## Valid rules:
 ```
