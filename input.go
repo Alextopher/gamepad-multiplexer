@@ -7,6 +7,12 @@ import (
 	"github.com/go-gl/glfw/v3.3/glfw"
 )
 
+// Joysticks and triggers behave fairly differently
+var (
+	JOYSTICK_AXES = [4]glfw.GamepadAxis{glfw.AxisLeftX, glfw.AxisLeftY, glfw.AxisRightX, glfw.AxisLeftY}
+	TRIGGER_AXES  = [2]glfw.GamepadAxis{glfw.AxisLeftTrigger, glfw.AxisRightTrigger}
+)
+
 // Sets up handlers for joystick connect & disconnect
 func joystickCallbacks(joy glfw.Joystick, event glfw.PeripheralEvent) {
 	if event == glfw.Connected {

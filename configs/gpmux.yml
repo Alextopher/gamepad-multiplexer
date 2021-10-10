@@ -27,3 +27,23 @@ controllers:
         - BUTTON_DPAD_RIGHT
         - BUTTON_DPAD_DOWN
         - BUTTON_DPAD_LEFT
+
+mapping:
+    BUTTON_CROSS: z             # jump
+    BUTTON_CIRCLE: a            # focus
+    BUTTON_SQUARE: x            # attack
+    BUTTON_TRIANGLE: d          # dream nail
+    BUTTON_RIGHT_BUMPER: f      # quick cast
+    BUTTON_START: esc           # pause
+    BUTTON_BACK: i              # inventory
+    BUTTON_LEFT_BUMPER: tab     # map
+    BUTTON_DPAD_UP: up          # movement
+    BUTTON_DPAD_RIGHT: right    # movement
+    BUTTON_DPAD_DOWN: down      # movement
+    BUTTON_DPAD_LEFT: left      # movement
+
+    AXIS_LEFT_TRIGGER: s        # super dash
+    AXIS_RIGHT_TRIGGER: c       # dash
+
+    AXIS_LEFT_X: left right     # movement
+    AXIS_LEFT_Y: up down        # movement
