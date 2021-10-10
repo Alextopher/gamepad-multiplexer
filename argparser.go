@@ -32,7 +32,7 @@ func argParse() (cli CommandLine) {
 	}
 }
 
-type RulesMap map[uint8][]MultiplexRule
+type RulesMap map[string]map[glfw.Joystick][]MultiplexRule
 type ButtonMap map[glfw.GamepadButton]MapRule
 type AxesMap map[glfw.GamepadAxis]MapRule
 
@@ -53,8 +53,8 @@ const (
 )
 
 type Config struct {
-	Controllers map[string][]string `yaml:"controllers"`
-	Mapping     map[string]string   `yaml:"mapping"`
+	Clients map[string]map[string][]string `yaml:"clients"`
+	Mapping map[string]string              `yaml:"mapping"`
 }
 
 func stringToRule(rule string) MultiplexRule {
@@ -116,7 +116,7 @@ func stringToRule(rule string) MultiplexRule {
 	return MultiplexRule{}
 }
 
-func readConfig(filename string) (rules RulesMap, buttonMap ButtonMap, axisMap AxesMap) {
+func readConfig(filename string) (clientRules RulesMap, buttonMap ButtonMap, axisMap AxesMap) {
 	yamlFile, err := ioutil.ReadFile(filename)
 
 	if err != nil {
@@ -128,17 +128,31 @@ func readConfig(filename string) (rules RulesMap, buttonMap ButtonMap, axisMap A
 	err = yaml.Unmarshal(yamlFile, &config)
 	if err != nil {
 		log.Fatalln("CONFIG ERROR: Failed to read config file due to error:", err)
+		os.Exit(1)
 	}
 
-	// Parse controller rules
-	rules = make(map[uint8][]MultiplexRule)
-	for joystick, newRules := range config.Controllers {
-		// `joystick0` <- get last character as int
-		id := glfw.Joystick(joystick[len(joystick)-1] - '0')
+	// Parse client rules
+	// id -> controller -> [rules]
+	clientRules = make(RulesMap)
+	for id, joysticks := range config.Clients {
+		if _, exists := clientRules[id]; exists {
+			log.Fatalf("CONFIG ERROR: client %s already defined.", id)
+			os.Exit(1)
+		}
 
-		rules[uint8(id)] = make([]MultiplexRule, len(newRules))
-		for i, rule := range newRules {
-			rules[uint8(id)][i] = stringToRule(rule)
+		clientRules[id] = make(map[glfw.Joystick][]MultiplexRule)
+		for joystick, rules := range joysticks {
+			joystick := glfw.Joystick(joystick[len(joystick)-1] - '0')
+
+			if _, exists := clientRules[id][joystick]; exists {
+				log.Fatalf("CONFIG ERROR: client %s joystick %d already defined.", id, joystick)
+				os.Exit(1)
+			}
+
+			clientRules[id][joystick] = make([]MultiplexRule, len(rules))
+			for i, rule := range rules {
+				clientRules[id][joystick][i] = stringToRule(rule)
+			}
 		}
 	}
 
@@ -170,5 +184,5 @@ func readConfig(filename string) (rules RulesMap, buttonMap ButtonMap, axisMap A
 		}
 	}
 
-	return rules, buttonMap, axisMap
+	return clientRules, buttonMap, axisMap
 }

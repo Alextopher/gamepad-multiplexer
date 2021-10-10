@@ -2,10 +2,11 @@ package main
 
 import (
 	"errors"
-	"github.com/go-gl/glfw/v3.3/glfw"
 	"math"
 	"net"
 	"time"
+
+	"github.com/go-gl/glfw/v3.3/glfw"
 )
 
 const Interval time.Duration = 100 * time.Millisecond

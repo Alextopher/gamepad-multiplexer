@@ -23,10 +23,16 @@ func main() {
 	cli := argParse()
 
 	// Read in the configs
-	rules, buttonMap, axisMap := readConfig(cli.Config)
+	// TODO : rules, buttonMap, axisMap := readConfig(cli.Config)
+	_, buttonMap, axisMap := readConfig(cli.Config)
 
 	// Initialize the joystick handlers
 	joysticks := joysticksInit()
+
+	// Virtual Gamepad
+	var multiplexed glfw.GamepadState
+	// TODO Next line not needed once we call `multiplex`
+	multiplexed.Axes = [6]float32{0, 0, 0, 0, -1, -1}
 
 	if cli.Listen {
 		// Run the server to listen for joystick inputs
@@ -34,7 +40,7 @@ func main() {
 
 		for {
 			glfw.PollEvents()
-			multiplexed := multiplex(rules, gamepadStates)
+			// TODO : multiplexed = multiplex(rules, gamepadStates, &multiplexed)
 			if cli.Verbose {
 				log.Println(multiplexed)
 			}
@@ -98,7 +104,7 @@ func main() {
 				}
 			}
 			// Multiplex the states
-			multiplexed := multiplex(rules, gamepadStates)
+			// TODO : multiplexed = multiplex(rules, gamepadStates, &multiplexed)
 			if cli.Verbose {
 				log.Println(multiplexed)
 			}
