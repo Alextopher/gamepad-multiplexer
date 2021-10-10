@@ -21,10 +21,6 @@ func main() {
 	// Read command line args
 	cli := argParse()
 
-	// Read in the configs
-	// TODO : rules, buttonMap, axisMap := readConfig(cli.Config)
-	_, buttonMap, axisMap := readConfig(cli.Config)
-
 	// Initialize the joystick handlers
 	joysticks := joysticksInit()
 
@@ -34,8 +30,11 @@ func main() {
 	multiplexed.Axes = [6]float32{0, 0, 0, 0, -1, -1}
 
 	if cli.Listen {
+		// Read in the configs
+		rules, buttonMap, axisMap := readConfig(cli.Config)
+
 		// Run the server to listen for joystick inputs
-		go listen(cli.Domain, cli.Port)
+		go listen(cli.Domain, cli.Port, rules)
 
 		for {
 			glfw.PollEvents()

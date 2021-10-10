@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"math"
-	"net"
 	"regexp"
 	"time"
 
@@ -17,9 +16,11 @@ var namePattern = regexp.MustCompile("[a-zA-Z0-9-]+")
 
 const (
 	REGISTER              = 1
-	CONFIGURATION         = 2
-	PERIPHERAL_CONNECT    = 3
-	PERIPHERAL_DISCONNECT = 4
+	SET_ID                = 2
+	CONFIGURATION         = 3
+	PERIPHERAL_CONNECT    = 4
+	PERIPHERAL_DISCONNECT = 5
+	DONE                  = 6
 	ERROR                 = 255
 )
 
@@ -27,15 +28,6 @@ type ControlPacket struct {
 	Type uint8
 	Len  uint32
 	Data []byte
-}
-
-// Error returns an error packet to send
-func (p *ControlPacket) Error(msg string) []byte {
-	p.Type = ERROR
-	p.Len = uint32(len(msg))
-	p.Data = []byte(msg)
-
-	return p.Bytes()
 }
 
 // Parse the data from the packet and convert to valid struct
@@ -53,6 +45,11 @@ func (p *ControlPacket) Parse(data []byte) error {
 	// Get the length of the data
 	p.Len = binary.BigEndian.Uint32(data[pos : pos+4])
 	pos += 4
+
+	// Make sure the packet size is right
+	if len(data)-5 < 0 || uint32(len(data)-5) < p.Len {
+		return errors.New("packet improperly formatted")
+	}
 
 	// Get the data
 	p.Data = data[pos:(pos + int(p.Len))]
@@ -74,12 +71,37 @@ func (p *ControlPacket) Bytes() []byte {
 	return data
 }
 
+// Error returns an error packet to send
+func (p *ControlPacket) Error(msg string) []byte {
+	p.Type = ERROR
+	p.Len = uint32(len(msg))
+	p.Data = []byte(msg)
+
+	return p.Bytes()
+}
+
+// SetId returns an SET_ID packet to send
+func (p *ControlPacket) SetId(id uint8) []byte {
+	p.Type = SET_ID
+	p.Len = 1
+	p.Data = []byte{id}
+
+	return p.Bytes()
+}
+
+// Configure returns an CONFIGURATION packet to send
+func (p *ControlPacket) Configure(data []byte) []byte {
+	p.Type = CONFIGURATION
+	p.Len = uint32(len(data))
+	p.Data = data
+
+	return p.Bytes()
+}
+
 type GamestatePacket struct {
 	PacketId     uint32
 	JoystickId   uint8
 	GamepadState glfw.GamepadState
-	LAddr        net.Addr
-	RAddr        net.Addr
 }
 
 // Parse the data from the packet and convert to valid struct

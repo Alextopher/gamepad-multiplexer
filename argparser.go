@@ -3,7 +3,6 @@ package main
 import (
 	"io/ioutil"
 	"log"
-	"os"
 	"strings"
 
 	"github.com/alecthomas/kong"
@@ -34,7 +33,7 @@ func argParse() (cli CommandLine) {
 
 type RulesMap map[string]map[glfw.Joystick][]MultiplexRule
 type ButtonMap map[glfw.GamepadButton]MapRule
-type AxesMap map[glfw.GamepadAxis]MapRule
+type AxisMap map[glfw.GamepadAxis]MapRule
 
 type MultiplexRule struct {
 	Type   int
@@ -112,11 +111,10 @@ func stringToRule(rule string) MultiplexRule {
 	}
 
 	log.Fatalf("CONFIG ERROR: Unrecognized BUTTON or AXIS %s!\n", rule)
-	os.Exit(1)
 	return MultiplexRule{}
 }
 
-func readConfig(filename string) (clientRules RulesMap, buttonMap ButtonMap, axisMap AxesMap) {
+func readConfig(filename string) (clientRules RulesMap, buttonMap ButtonMap, axisMap AxisMap) {
 	yamlFile, err := ioutil.ReadFile(filename)
 
 	if err != nil {
@@ -128,7 +126,6 @@ func readConfig(filename string) (clientRules RulesMap, buttonMap ButtonMap, axi
 	err = yaml.Unmarshal(yamlFile, &config)
 	if err != nil {
 		log.Fatalln("CONFIG ERROR: Failed to read config file due to error:", err)
-		os.Exit(1)
 	}
 
 	// Parse client rules
@@ -137,7 +134,6 @@ func readConfig(filename string) (clientRules RulesMap, buttonMap ButtonMap, axi
 	for id, joysticks := range config.Clients {
 		if _, exists := clientRules[id]; exists {
 			log.Fatalf("CONFIG ERROR: client %s already defined.", id)
-			os.Exit(1)
 		}
 
 		clientRules[id] = make(map[glfw.Joystick][]MultiplexRule)
@@ -146,7 +142,6 @@ func readConfig(filename string) (clientRules RulesMap, buttonMap ButtonMap, axi
 
 			if _, exists := clientRules[id][joystick]; exists {
 				log.Fatalf("CONFIG ERROR: client %s joystick %d already defined.", id, joystick)
-				os.Exit(1)
 			}
 
 			clientRules[id][joystick] = make([]MultiplexRule, len(rules))
@@ -173,7 +168,6 @@ func readConfig(filename string) (clientRules RulesMap, buttonMap ButtonMap, axi
 				keys := strings.Fields(key)
 				if len(keys) != 2 {
 					log.Fatalf("CONFIG ERROR: rule %s requires 2 key outputs.\nFor example:\n%s: left right", input, input)
-					os.Exit(1)
 				}
 
 				axisMap[rule.Axis] = MapRule{keys[0], keys[1]}
