@@ -15,6 +15,7 @@ Work in progress gamepad multiplexer. Allows multiple players to control the sam
 - [x] output keyboard events to the OS
 - [x] create a server to receive button presses
 - [x] create a client to send button presses
+- [ ] capture keyboard and mouse inputs but only in window spawned by process
 
 ## Valid rules:
 ```
