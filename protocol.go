@@ -80,7 +80,16 @@ func (p *ControlPacket) Error(msg string) []byte {
 	return p.Bytes()
 }
 
-// SetId returns an SET_ID packet to send
+// Register returns a REGISTER packet to send
+func (p *ControlPacket) Register(name string) []byte {
+	p.Type = REGISTER
+	p.Len = uint32(len(name))
+	p.Data = []byte(name)
+
+	return p.Bytes()
+}
+
+// SetId returns a SET_ID packet to send
 func (p *ControlPacket) SetId(id uint8) []byte {
 	p.Type = SET_ID
 	p.Len = 1
@@ -89,7 +98,7 @@ func (p *ControlPacket) SetId(id uint8) []byte {
 	return p.Bytes()
 }
 
-// Configure returns an CONFIGURATION packet to send
+// Configure returns a CONFIGURATION packet to send
 func (p *ControlPacket) Configure(data []byte) []byte {
 	p.Type = CONFIGURATION
 	p.Len = uint32(len(data))

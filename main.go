@@ -89,7 +89,8 @@ func main() {
 		}
 	} else {
 		// Connect to the server
-		conn := connect(cli.Domain, cli.Port)
+		// TODO: Use the rules
+		conn, _, id := connect(cli.Domain, cli.Port, cli.Name)
 
 		// Create a counter
 		count := 1
@@ -110,7 +111,7 @@ func main() {
 			// Create the multiplexed packet
 			pkt := GamestatePacket{
 				PacketId:     uint32(count),
-				JoystickId:   0,
+				JoystickId:   id,
 				GamepadState: multiplexed,
 			}
 			// Update the packet count

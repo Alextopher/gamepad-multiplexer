@@ -16,6 +16,7 @@ type CommandLine struct {
 	Listen  bool   `short:"l" help:"Specify whether to listen as a server rather than connect"`
 	Domain  string `short:"d" help:"The ip or domain to use" default:"localhost"`
 	Port    uint16 `short:"p" help:"The port to use" default:"14695"`
+	Name    string `short:"n" help:"The name of the client" default:"client"`
 	Verbose bool   `short:"v" help:"Increase verbosity level"`
 }
 
