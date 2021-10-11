@@ -24,14 +24,14 @@ const (
 	ERROR                 = 255
 )
 
-type ControlPacket struct {
+type ControlProtocol struct {
 	Type uint8
 	Len  uint32
 	Data []byte
 }
 
 // Parse the data from the packet and convert to valid struct
-func (p *ControlPacket) Parse(data []byte) error {
+func (p *ControlProtocol) Parse(data []byte) error {
 	if len(data) < 5 {
 		return errors.New("packet improperly formatted")
 	}
@@ -58,7 +58,7 @@ func (p *ControlPacket) Parse(data []byte) error {
 }
 
 // Bytes turns the data from the packet into the byte slice it represents
-func (p *ControlPacket) Bytes() []byte {
+func (p *ControlProtocol) Bytes() []byte {
 	data := make([]byte, 5, 5+p.Len)
 	// Set the type
 	data[0] = p.Type
@@ -72,7 +72,7 @@ func (p *ControlPacket) Bytes() []byte {
 }
 
 // Error returns an error packet to send
-func (p *ControlPacket) Error(msg string) []byte {
+func (p *ControlProtocol) Error(msg string) []byte {
 	p.Type = ERROR
 	p.Len = uint32(len(msg))
 	p.Data = []byte(msg)
@@ -81,7 +81,7 @@ func (p *ControlPacket) Error(msg string) []byte {
 }
 
 // Register returns a REGISTER packet to send
-func (p *ControlPacket) Register(name string) []byte {
+func (p *ControlProtocol) Register(name string) []byte {
 	p.Type = REGISTER
 	p.Len = uint32(len(name))
 	p.Data = []byte(name)
@@ -90,7 +90,7 @@ func (p *ControlPacket) Register(name string) []byte {
 }
 
 // SetId returns a SET_ID packet to send
-func (p *ControlPacket) SetId(id uint8) []byte {
+func (p *ControlProtocol) SetId(id uint8) []byte {
 	p.Type = SET_ID
 	p.Len = 1
 	p.Data = []byte{id}
@@ -99,7 +99,7 @@ func (p *ControlPacket) SetId(id uint8) []byte {
 }
 
 // Configure returns a CONFIGURATION packet to send
-func (p *ControlPacket) Configure(data []byte) []byte {
+func (p *ControlProtocol) Configure(data []byte) []byte {
 	p.Type = CONFIGURATION
 	p.Len = uint32(len(data))
 	p.Data = data
@@ -107,14 +107,14 @@ func (p *ControlPacket) Configure(data []byte) []byte {
 	return p.Bytes()
 }
 
-type GamestatePacket struct {
+type GamestateProtocol struct {
 	PacketId     uint32
 	JoystickId   uint8
 	GamepadState glfw.GamepadState
 }
 
 // Parse the data from the packet and convert to valid struct
-func (p *GamestatePacket) Parse(data []byte) error {
+func (p *GamestateProtocol) Parse(data []byte) error {
 	// Bad packet length
 	if len(data) != 31 {
 		return errors.New("invalid packet length")
@@ -148,7 +148,7 @@ func (p *GamestatePacket) Parse(data []byte) error {
 }
 
 // Bytes turns the data from the packet into the byte slice it represents
-func (p GamestatePacket) Bytes() []byte {
+func (p GamestateProtocol) Bytes() []byte {
 	// Create our byte slice
 	b := make([]byte, 31, 31)
 	pos := 0

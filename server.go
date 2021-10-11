@@ -17,7 +17,7 @@ type Client struct {
 }
 
 func controlError(conn net.Conn, msg string) {
-	errMsg := (&ControlPacket{}).Error(msg)
+	errMsg := (&ControlProtocol{}).Error(msg)
 	conn.Write(errMsg)
 	conn.Close()
 }
@@ -35,7 +35,7 @@ func controlSocket(conn net.Conn, rules RulesMap) {
 		return
 	}
 
-	pkt := &ControlPacket{}
+	pkt := &ControlProtocol{}
 	err = pkt.Parse(buf)
 	if err != nil {
 		controlError(conn, "Invalid packet, expecting type REGISTER followed by a name")
@@ -96,6 +96,9 @@ func controlSocket(conn net.Conn, rules RulesMap) {
 			conn.RemoteAddr().String(),
 			err.Error(),
 		)
+		clientLock.Lock()
+		delete(clients, newId)
+		clientLock.Unlock()
 		return
 	}
 
@@ -104,11 +107,15 @@ func controlSocket(conn net.Conn, rules RulesMap) {
 	if !exists {
 		// Tell the client they don't have a configuration
 		controlError(conn, "Configuration doesn't exist for name "+name)
+		clientLock.Lock()
+		delete(clients, newId)
+		clientLock.Unlock()
 		return
 	}
 
 	// Send over the rules
 	conf, err := yaml.Marshal(joystickRules)
+	log.Println(string(conf))
 	if err != nil {
 		log.Fatalln("Configuration is bad")
 	}
@@ -121,6 +128,9 @@ func controlSocket(conn net.Conn, rules RulesMap) {
 			conn.RemoteAddr().String(),
 			err.Error(),
 		)
+		clientLock.Lock()
+		delete(clients, newId)
+		clientLock.Unlock()
 		return
 	}
 
@@ -138,6 +148,9 @@ func controlSocket(conn net.Conn, rules RulesMap) {
 				conn.RemoteAddr().String(),
 				err.Error(),
 			)
+			clientLock.Lock()
+			delete(clients, newId)
+			clientLock.Unlock()
 			return
 		}
 
@@ -154,6 +167,9 @@ func controlSocket(conn net.Conn, rules RulesMap) {
 		} else if pkt.Type == DONE {
 			// Close the connection, the client said they're done
 			conn.Close()
+			clientLock.Lock()
+			delete(clients, newId)
+			clientLock.Unlock()
 			return
 		}
 	}
@@ -206,7 +222,7 @@ func joystickHandler(socket string) {
 		// Get the IP of the remote host
 		ip := raddr.IP.String()
 
-		pkt := GamestatePacket{}
+		pkt := GamestateProtocol{}
 		err = pkt.Parse(buf)
 		if err != nil {
 			log.Printf("Bad packet received from %s with contents '%x'", ip, buf)
