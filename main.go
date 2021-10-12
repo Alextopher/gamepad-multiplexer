@@ -1,11 +1,12 @@
 package main
 
 import (
-	"github.com/go-gl/glfw/v3.3/glfw"
-	"github.com/go-vgo/robotgo"
 	"log"
 	"runtime"
 	"time"
+
+	"github.com/go-gl/glfw/v3.3/glfw"
+	"github.com/go-vgo/robotgo"
 )
 
 var gamepadStates map[uint8]glfw.GamepadState = make(map[uint8]glfw.GamepadState)

@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"gopkg.in/yaml.v2"
 	"log"
 	"net"
 	"sync"
@@ -24,7 +23,7 @@ func controlError(conn net.Conn, msg string) {
 
 // TODO finish this
 // Handle the controlSocket between the client and server
-func controlSocket(conn net.Conn, rules RulesMap) {
+func controlSocket(conn net.Conn, rules ClientsMap) {
 	// Create a buffer
 	buf := make([]byte, 1024)
 
@@ -114,11 +113,9 @@ func controlSocket(conn net.Conn, rules RulesMap) {
 	}
 
 	// Send over the rules
-	conf, err := yaml.Marshal(joystickRules)
-	log.Println(string(conf))
-	if err != nil {
-		log.Fatalln("Configuration is bad")
-	}
+	fmt.Println(joystickRules)
+	conf := joystickRules.Bytes()
+	log.Println(conf)
 	_, err = conn.Write(pkt.Configure(conf))
 
 	// Complain on error
@@ -176,7 +173,7 @@ func controlSocket(conn net.Conn, rules RulesMap) {
 
 }
 
-func listen(host string, port uint16, rules RulesMap) {
+func listen(host string, port uint16, rules ClientsMap) {
 	// Create the TCP listener to make the controlSocket with all clients
 	serv, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, port))
 	if err != nil {

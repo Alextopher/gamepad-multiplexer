@@ -175,3 +175,51 @@ func (p GamestateProtocol) Bytes() []byte {
 
 	return b
 }
+
+func (rules RulesMap) Bytes() []byte {
+	length := 0
+	for _, array := range rules {
+		length += len(array) + 2
+	}
+
+	b := make([]byte, 0, length)
+	for joystick, array := range rules {
+		// 1 byte joystick id [0, 15]
+		b = append(b, byte(joystick))
+		for _, rule := range array {
+			// 1 byte per rule.
+			// 1st bit represents if rule is an Button (0) Axis (1)
+			if rule.Type == Button {
+				b = append(b, byte(rule.Button))
+			} else {
+				b = append(b, byte(rule.Axis|1<<7))
+			}
+		}
+		b = append(b, 0xFF)
+	}
+
+	return b
+}
+
+func ParseRulesMap(bytes []byte) (RulesMap, error) {
+	rules := make(RulesMap)
+
+	for i := 0; i < len(bytes); i++ {
+		joystick := glfw.Joystick(i)
+		rules[joystick] = make([]MultiplexRule, 0)
+
+		i++
+		for bytes[i] != 255 {
+			var rule MultiplexRule
+			if bytes[i]&128 == 0 {
+				rule = MultiplexRule{Button, glfw.GamepadButton(bytes[i] & 127), 0}
+			} else {
+				rule = MultiplexRule{Axis, 0, glfw.GamepadAxis(bytes[i] & 127)}
+			}
+			rules[joystick] = append(rules[joystick], rule)
+			i++
+		}
+	}
+
+	return rules, nil
+}

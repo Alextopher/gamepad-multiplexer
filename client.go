@@ -3,13 +3,11 @@ package main
 import (
 	"errors"
 	"fmt"
-	"gopkg.in/yaml.v2"
 	"log"
 	"net"
 )
 
-func connect(host string, port uint16, name string) (*net.TCPConn, *net.UDPConn, RulesMap,
-	uint8) {
+func connect(host string, port uint16, name string) (*net.TCPConn, *net.UDPConn, RulesMap, uint8) {
 	tcpRaddr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", host, port))
 	if err != nil {
 		log.Fatalln("Failed to resolve addr with err:", err)
@@ -89,7 +87,8 @@ func handshake(conn *net.TCPConn, name string) (rules RulesMap, id uint8, err er
 		return rules, id, err
 	}
 	if pkt.Type == CONFIGURATION {
-		err = yaml.Unmarshal(pkt.Data, &rules)
+		rules, err = ParseRulesMap(pkt.Data)
+		fmt.Println(rules)
 		if err != nil {
 			return rules, id, err
 		}

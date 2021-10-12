@@ -32,7 +32,8 @@ func argParse() (cli CommandLine) {
 	}
 }
 
-type RulesMap map[string]map[glfw.Joystick][]MultiplexRule
+type ClientsMap map[string]RulesMap
+type RulesMap map[glfw.Joystick][]MultiplexRule
 type ButtonMap map[glfw.GamepadButton]MapRule
 type AxisMap map[glfw.GamepadAxis]MapRule
 
@@ -115,7 +116,7 @@ func stringToRule(rule string) MultiplexRule {
 	return MultiplexRule{}
 }
 
-func readConfig(filename string) (clientRules RulesMap, buttonMap ButtonMap, axisMap AxisMap) {
+func readConfig(filename string) (clientRules ClientsMap, buttonMap ButtonMap, axisMap AxisMap) {
 	yamlFile, err := ioutil.ReadFile(filename)
 
 	if err != nil {
@@ -131,7 +132,7 @@ func readConfig(filename string) (clientRules RulesMap, buttonMap ButtonMap, axi
 
 	// Parse client rules
 	// id -> controller -> [rules]
-	clientRules = make(RulesMap)
+	clientRules = make(ClientsMap)
 	for id, joysticks := range config.Clients {
 		if _, exists := clientRules[id]; exists {
 			log.Fatalf("CONFIG ERROR: client %s already defined.", id)
