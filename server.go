@@ -5,6 +5,8 @@ import (
 	"log"
 	"net"
 	"sync"
+
+	"github.com/go-gl/glfw/v3.3/glfw"
 )
 
 var clients map[uint8]Client = make(map[uint8]Client)
@@ -113,9 +115,7 @@ func controlSocket(conn net.Conn, rules ClientsMap) {
 	}
 
 	// Send over the rules
-	fmt.Println(joystickRules)
 	conf := joystickRules.Bytes()
-	log.Println(conf)
 	_, err = conn.Write(pkt.Configure(conf))
 
 	// Complain on error
@@ -237,6 +237,6 @@ func joystickHandler(socket string) {
 
 		// Update the game states in the map
 		// Possibly unsafe?
-		gamepadStates[pkt.JoystickId] = pkt.GamepadState
+		gamepadStates[glfw.Joystick(pkt.JoystickId)] = pkt.GamepadState
 	}
 }

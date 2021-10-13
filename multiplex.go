@@ -15,7 +15,7 @@ func abs32(f float32) float32 {
 	}
 }
 
-func multiplex(rules map[uint8][]MultiplexRule, states map[uint8]glfw.GamepadState, multiplexed *glfw.GamepadState) {
+func multiplex(rules RulesMap, states map[glfw.Joystick]glfw.GamepadState, multiplexed *glfw.GamepadState) {
 	// totals to calculate average
 	axesUsed := []float32{0, 0, 0, 0, 0, 0}
 	multiplexed.Axes = [6]float32{0, 0, 0, 0, -1, -1}

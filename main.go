@@ -9,7 +9,7 @@ import (
 	"github.com/go-vgo/robotgo"
 )
 
-var gamepadStates map[uint8]glfw.GamepadState = make(map[uint8]glfw.GamepadState)
+var gamepadStates map[glfw.Joystick]glfw.GamepadState = make(map[glfw.Joystick]glfw.GamepadState)
 
 func main() {
 	runtime.LockOSThread()
@@ -39,7 +39,7 @@ func main() {
 
 		for {
 			glfw.PollEvents()
-			// TODO : multiplexed = multiplex(rules, gamepadStates, &multiplexed)
+			multiplex(rules, gamepadStates, &multiplexed)
 			if cli.Verbose {
 				log.Println(multiplexed)
 			}
@@ -90,8 +90,7 @@ func main() {
 		}
 	} else {
 		// Connect to the server
-		// TODO: Use the rules
-		_, udpConn, _, id := connect(cli.Domain, cli.Port, cli.Name)
+		_, udpConn, rules, id := connect(cli.Domain, cli.Port, cli.Name)
 
 		// Create a counter
 		count := 1
@@ -100,11 +99,11 @@ func main() {
 			// Get joystick states
 			for i, joy := range joysticks {
 				if joy.Present() {
-					gamepadStates[uint8(i)] = *joy.GetGamepadState()
+					gamepadStates[glfw.Joystick(i)] = *joy.GetGamepadState()
 				}
 			}
 			// Multiplex the states
-			// TODO : multiplexed = multiplex(rules, gamepadStates, &multiplexed)
+			multiplex(rules, gamepadStates, &multiplexed)
 			if cli.Verbose {
 				log.Println(multiplexed)
 			}

@@ -46,51 +46,52 @@ func handshake(conn *net.TCPConn, name string) (rules RulesMap, id uint8, err er
 	// Register a name
 	_, err = conn.Write(pkt.Register(name))
 	if err != nil {
-		return rules, id, err
+		return nil, 255, err
 	}
 
 	// Read in the next packet
 	buf := make([]byte, 512)
 	_, err = conn.Read(buf)
 	if err != nil {
-		return rules, id, err
+		return nil, 255, err
 	}
 
 	// See if it's an ID
 	err = pkt.Parse(buf)
 	if err != nil {
-		return rules, id, err
+		return nil, 255, err
 	}
+
 	if pkt.Type == SET_ID {
 		// Get the id
 		id = pkt.Data[0]
 	} else if pkt.Type == ERROR {
 		// Close the connection since this is wonky
 		conn.Close()
-		return rules, id, errors.New(string(pkt.Data))
+		return nil, 255, errors.New(string(pkt.Data))
 	} else {
 		// Close the connection since this is wonky
 		conn.Close()
-		return rules, id, errors.New("server response was invalid, aborting connection")
+		return nil, 255, errors.New("server response was invalid, aborting connection")
 	}
 
 	// Get the next packet
 	buf = make([]byte, 4096)
 	_, err = conn.Read(buf)
 	if err != nil {
-		return rules, id, err
+		return nil, id, err
 	}
 
 	// See if it's a configuration
 	err = pkt.Parse(buf)
 	if err != nil {
-		return rules, id, err
+		return nil, id, err
 	}
+
 	if pkt.Type == CONFIGURATION {
 		rules, err = ParseRulesMap(pkt.Data)
-		fmt.Println(rules)
 		if err != nil {
-			return rules, id, err
+			return nil, id, err
 		}
 	} else if pkt.Type == ERROR {
 		// Close the connection since this is wonky
@@ -99,7 +100,7 @@ func handshake(conn *net.TCPConn, name string) (rules RulesMap, id uint8, err er
 	} else {
 		// Close the connection since this is wonky
 		conn.Close()
-		return rules, 0, errors.New("server response was invalid, aborting connection")
+		return rules, id, errors.New("server response was invalid, aborting connection")
 	}
 
 	// Handshake is complete
