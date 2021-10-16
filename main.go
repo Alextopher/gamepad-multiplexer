@@ -39,7 +39,7 @@ func main() {
 
 		for {
 			glfw.PollEvents()
-			multiplex(rules, gamepadStates, &multiplexed)
+			multiplexTrust(gamepadStates, &multiplexed)
 			if cli.Verbose {
 				log.Println(multiplexed)
 			}

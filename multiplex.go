@@ -15,6 +15,46 @@ func abs32(f float32) float32 {
 	}
 }
 
+func multiplexTrust(states map[glfw.Joystick]glfw.GamepadState, multiplexed *glfw.GamepadState) {
+	// totals to calculate average
+	axesUsed := []float32{0, 0, 0, 0, 0, 0}
+	multiplexed.Axes = [6]float32{0, 0, 0, 0, -1, -1}
+	multiplexed.Buttons = [15]glfw.Action{glfw.Release}
+
+	for _, state := range states {
+		for i := 0; i < len(multiplexed.Buttons); i++ {
+			multiplexed.Buttons[i] |= state.Buttons[i]
+		}
+
+		for i := 0; i < len(multiplexed.Axes); i++ {
+			if abs32(state.Axes[i]) > STICK_DEADZONE {
+				multiplexed.Axes[i] += state.Axes[i]
+				axesUsed[i] += 1
+			}
+		}
+	}
+
+	// Joysticks are centered at 0
+	for _, axis := range JOYSTICK_AXES {
+		if axesUsed[axis] == 0 {
+			multiplexed.Axes[axis] = 0
+		} else {
+			// Average all the inputs from controllers
+			multiplexed.Axes[axis] = multiplexed.Axes[axis] / axesUsed[axis]
+		}
+	}
+
+	// Triggers are centered at -1
+	for _, axis := range TRIGGER_AXES {
+		if axesUsed[axis] == 0 {
+			multiplexed.Axes[axis] = -1
+		} else {
+			// Average all the inputs from controllers
+			multiplexed.Axes[axis] = multiplexed.Axes[axis] / axesUsed[axis]
+		}
+	}
+}
+
 func multiplex(rules RulesMap, states map[glfw.Joystick]glfw.GamepadState, multiplexed *glfw.GamepadState) {
 	// totals to calculate average
 	axesUsed := []float32{0, 0, 0, 0, 0, 0}
