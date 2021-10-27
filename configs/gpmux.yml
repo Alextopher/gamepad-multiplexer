@@ -22,11 +22,11 @@ clients:
             - AXIS_RIGHT_Y
             - AXIS_LEFT_TRIGGER
             - AXIS_RIGHT_TRIGGER
-        joystick1:
-            - BUTTON_DPAD_UP
-            - BUTTON_DPAD_RIGHT
-            - BUTTON_DPAD_DOWN
-            - BUTTON_DPAD_LEFT
+#        joystick1:
+#            - BUTTON_DPAD_UP
+#            - BUTTON_DPAD_RIGHT
+#            - BUTTON_DPAD_DOWN
+#            - BUTTON_DPAD_LEFT
 
     alextopher:
         joystick0:

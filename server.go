@@ -2,20 +2,11 @@ package main
 
 import (
 	"fmt"
+	"github.com/go-gl/glfw/v3.3/glfw"
 	"log"
 	"net"
-	"sync"
-
-	"github.com/go-gl/glfw/v3.3/glfw"
+	"strings"
 )
-
-var clients map[uint8]Client = make(map[uint8]Client)
-var clientLock *sync.Mutex = &sync.Mutex{}
-
-type Client struct {
-	Id   uint8
-	Name string
-}
 
 func controlError(conn net.Conn, msg string) {
 	errMsg := (&ControlProtocol{}).Error(msg)
@@ -23,28 +14,26 @@ func controlError(conn net.Conn, msg string) {
 	conn.Close()
 }
 
-// TODO finish this
-// Handle the controlSocket between the client and server
-func controlSocket(conn net.Conn, rules ClientsMap) {
+func (c *Connection) ServerHandshake() error {
 	// Create a buffer
 	buf := make([]byte, 1024)
 
 	// Read in data
-	_, err := conn.Read(buf)
+	_, err := c.TCPConn.Read(buf)
 	if err != nil {
-		log.Printf("Failed to read from client %s with error: %s", conn.RemoteAddr().String(), err.Error())
-		return
+		log.Printf("Failed to read from client %s with error: %s", c.TCPConn.RemoteAddr().String(), err.Error())
+		return err
 	}
 
 	pkt := &ControlProtocol{}
 	err = pkt.Parse(buf)
 	if err != nil {
-		controlError(conn, "Invalid packet, expecting type REGISTER followed by a name")
-		return
+		controlError(c.TCPConn, "Invalid packet, expecting type REGISTER followed by a name")
+		return err
 	}
 	if pkt.Type != REGISTER {
-		controlError(conn, "Invalid packet, expecting type REGISTER followed by a name")
-		return
+		controlError(c.TCPConn, "Invalid packet, expecting type REGISTER followed by a name")
+		return err
 	}
 
 	// Get the client name
@@ -53,8 +42,8 @@ func controlSocket(conn net.Conn, rules ClientsMap) {
 	// See if it's a valid name
 	if !namePattern.Match(pkt.Data) {
 		// Invalid name, tell them that and die
-		controlError(conn, "Invalid name")
-		return
+		controlError(c.TCPConn, "Invalid name")
+		return err
 	}
 
 	// Loop through clients to see if this name already exists
@@ -64,89 +53,96 @@ func controlSocket(conn net.Conn, rules ClientsMap) {
 	for _, client := range clients {
 		// Kill the connection if the name already exists
 		if client.Name == name {
-			controlError(conn, "Name already taken, please try something else")
+			controlError(c.TCPConn, "Name already taken, please try something else")
 			// Remember to unlock
 			clientLock.Unlock()
-			return
+			return err
 		}
 	}
 
 	// Now try to find a new valid id
-	var newId uint8
-	for newId = 0; newId < 255; newId++ {
-		_, exists := clients[newId]
+	for c.Id = 0; c.Id < 255; c.Id++ {
+		_, exists := clients[c.Id]
 		if !exists {
 			break
 		}
 	}
 
 	// Create the client in the map
-	clients[newId] = Client{
-		Id:   newId,
-		Name: name,
-	}
+	clients[c.Id] = c
 
 	// Unlock since we are done with the map
 	clientLock.Unlock()
 
 	// Tell the client of their id
-	_, err = conn.Write(pkt.SetId(newId))
+	_, err = c.TCPConn.Write(pkt.SetId(c.Id))
 	if err != nil {
 		log.Printf(
 			"Could not send packet to client %s due to error: %s\n",
-			conn.RemoteAddr().String(),
+			c.TCPConn.RemoteAddr().String(),
 			err.Error(),
 		)
 		clientLock.Lock()
-		delete(clients, newId)
+		delete(clients, c.Id)
 		clientLock.Unlock()
-		return
+		return err
 	}
 
 	// Get the client configuration
-	joystickRules, exists := rules[name]
+	joystickRules, exists := c.Rules[name]
 	if !exists {
 		// Tell the client they don't have a configuration
-		controlError(conn, "Configuration doesn't exist for name "+name)
+		controlError(c.TCPConn, "Configuration doesn't exist for name "+name)
 		clientLock.Lock()
-		delete(clients, newId)
+		delete(clients, c.Id)
 		clientLock.Unlock()
-		return
+		return err
 	}
 
 	// Send over the rules
 	conf := joystickRules.Bytes()
-	_, err = conn.Write(pkt.Configure(conf))
+	_, err = c.TCPConn.Write(pkt.Configure(conf))
 
 	// Complain on error
 	if err != nil {
 		log.Printf(
 			"Could not send packet to client %s due to error: %s\n",
-			conn.RemoteAddr().String(),
+			c.TCPConn.RemoteAddr().String(),
 			err.Error(),
 		)
 		clientLock.Lock()
-		delete(clients, newId)
+		delete(clients, c.Id)
 		clientLock.Unlock()
+		return err
+	}
+	return nil
+}
+
+// ControlSocket handles the handshake with the client and continues
+// to listen for messages to the server
+func (c *Connection) ControlSocket(port uint16) {
+	// Handle the handshake
+	err := c.ServerHandshake()
+	if err != nil {
 		return
 	}
 
-	// Handshake is complete,
-	// spin off udp server for this client
-	go joystickHandler(conn.RemoteAddr().String())
+	// Spin off udp server for this client
+	go joystickHandler(c, port)
 
+	pkt := &ControlProtocol{}
 	// Wait for joystick peripheral announcements
 	for {
 		buf := make([]byte, 512)
-		_, err := conn.Read(buf)
+		_, err := c.TCPConn.Read(buf)
 		if err != nil {
 			log.Printf(
 				"Could not read packet from client %s due to error: %s\n",
-				conn.RemoteAddr().String(),
+				c.TCPConn.RemoteAddr().String(),
 				err.Error(),
 			)
 			clientLock.Lock()
-			delete(clients, newId)
+			delete(clients, c.Id)
 			clientLock.Unlock()
 			return
 		}
@@ -154,7 +150,7 @@ func controlSocket(conn net.Conn, rules ClientsMap) {
 		// Parse the packet and complain on failure, but don't close the connection
 		err = pkt.Parse(buf)
 		if err != nil {
-			controlError(conn, "Invalid packet")
+			controlError(c.TCPConn, "Invalid packet")
 			continue
 		}
 
@@ -163,14 +159,13 @@ func controlSocket(conn net.Conn, rules ClientsMap) {
 			log.Println(string(pkt.Data))
 		} else if pkt.Type == DONE {
 			// Close the connection, the client said they're done
-			conn.Close()
+			c.TCPConn.Close()
 			clientLock.Lock()
-			delete(clients, newId)
+			delete(clients, c.Id)
 			clientLock.Unlock()
 			return
 		}
 	}
-
 }
 
 func listen(host string, port uint16, rules ClientsMap) {
@@ -186,21 +181,27 @@ func listen(host string, port uint16, rules ClientsMap) {
 		if err != nil {
 			log.Fatalln("Failed to accept client due to error:", err)
 		}
+		// Create the client
+		client := Connection{
+			TCPConn: conn,
+			Rules:   rules,
+		}
 		// Handle the controlSocket and die if it's bad
-		go controlSocket(conn, rules)
+		go client.ControlSocket(port)
 	}
 }
 
-func joystickHandler(socket string) {
+func joystickHandler(conn *Connection, port uint16) {
 	// Create the counter map
 	counter := make(map[string]uint32)
 
 	// Create the listener
-	servAddr, err := net.ResolveUDPAddr("udp", socket)
+	ip := strings.Split(conn.TCPConn.RemoteAddr().String(), ":")[0]
+	servAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", ip, port))
 	if err != nil {
 		log.Fatalln("Could not create server due to error:", err)
 	}
-	conn, err := net.ListenUDP("udp", servAddr)
+	conn.UDPConn, err = net.ListenUDP("udp", servAddr)
 	if err != nil {
 		log.Fatalln("Could not create server due to error:", err)
 	}
@@ -211,7 +212,7 @@ func joystickHandler(socket string) {
 		buf := make([]byte, 31)
 
 		// Read in the data from the packet
-		_, raddr, err := conn.ReadFromUDP(buf)
+		_, raddr, err := conn.UDPConn.ReadFromUDP(buf)
 		if err != nil {
 			log.Println(err)
 		}

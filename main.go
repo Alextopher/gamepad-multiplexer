@@ -90,7 +90,7 @@ func main() {
 		}
 	} else {
 		// Connect to the server
-		_, udpConn, rules, id := connect(cli.Domain, cli.Port, cli.Name)
+		conn := connect(cli.Domain, cli.Port, cli.Name)
 
 		// Create a counter
 		count := 1
@@ -103,7 +103,7 @@ func main() {
 				}
 			}
 			// Multiplex the states
-			multiplex(rules, gamepadStates, &multiplexed)
+			multiplex(conn.Rules[conn.Name], gamepadStates, &multiplexed)
 			if cli.Verbose {
 				log.Println(multiplexed)
 			}
@@ -111,7 +111,7 @@ func main() {
 			// Create the multiplexed packet
 			pkt := GamestateProtocol{
 				PacketId:     uint32(count),
-				JoystickId:   id,
+				JoystickId:   conn.Id,
 				GamepadState: multiplexed,
 			}
 			// Update the packet count
@@ -119,7 +119,7 @@ func main() {
 
 			// Send the packet to the server
 			go func() {
-				_, err := udpConn.Write(pkt.Bytes())
+				_, err := conn.UDPConn.Write(pkt.Bytes())
 				if err != nil {
 					log.Fatalln("Failed to send packet due to error:", err)
 				}
