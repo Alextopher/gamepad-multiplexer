@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/go-gl/glfw/v3.3/glfw"
@@ -10,6 +11,7 @@ import (
 )
 
 var gamepadStates map[glfw.Joystick]glfw.GamepadState = make(map[glfw.Joystick]glfw.GamepadState)
+var gamestateLock *sync.RWMutex = &sync.RWMutex{}
 
 func main() {
 	runtime.LockOSThread()
@@ -38,11 +40,15 @@ func main() {
 		go listen(cli.Domain, cli.Port, rules)
 
 		for {
-			glfw.PollEvents()
+			// glfw.PollEvents()
 			multiplexTrust(gamepadStates, &multiplexed)
 			if cli.Verbose {
 				log.Println(multiplexed)
 			}
+
+			// DEBUG
+			time.Sleep(Interval)
+			continue
 
 			// Button events
 			for i := 0; i < len(multiplexed.Buttons); i++ {
@@ -99,7 +105,11 @@ func main() {
 			// Get joystick states
 			for i, joy := range joysticks {
 				if joy.Present() {
+					// Is this the best place to put the locks?
+					gamestateLock.Lock()
 					gamepadStates[glfw.Joystick(i)] = *joy.GetGamepadState()
+					log.Println(gamepadStates[joy])
+					gamestateLock.Unlock()
 				}
 			}
 			// Multiplex the states

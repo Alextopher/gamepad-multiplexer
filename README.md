@@ -7,7 +7,7 @@ Work in progress gamepad multiplexer. Allows multiple players to control the sam
 - [x] connect & disconnect controllers
 - [x] detect gamepad
 - [x] read buttons and axis state from gamepads
-- [ ] parse rules from yaml file
+- [x] parse rules from yaml file
 - [x] parse gamepad to keyboard event from yaml file
 - [ ] parse axis to mouse event from yaml file
 - [x] multiplex gamepad data to single virtual gamepad

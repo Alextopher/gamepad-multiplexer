@@ -203,7 +203,9 @@ func udpListener(serv net.PacketConn) {
 
 		// TODO Check client rules to validate client
 		// Multiplex the rules
+		gamestateLock.Lock()
 		gamepadStates[glfw.Joystick(pkt.JoystickId)] = pkt.GamepadState
+		gamestateLock.Unlock()
 	}
 }
 

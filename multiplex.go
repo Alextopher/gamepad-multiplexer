@@ -18,9 +18,10 @@ func abs32(f float32) float32 {
 func multiplexTrust(states map[glfw.Joystick]glfw.GamepadState, multiplexed *glfw.GamepadState) {
 	// totals to calculate average
 	axesUsed := []float32{0, 0, 0, 0, 0, 0}
-	multiplexed.Axes = [6]float32{0, 0, 0, 0, -1, -1}
+	multiplexed.Axes = [6]float32{0, 0, 0, 0, 0, 0}
 	multiplexed.Buttons = [15]glfw.Action{glfw.Release}
 
+	gamestateLock.RLock()
 	for _, state := range states {
 		for i := 0; i < len(multiplexed.Buttons); i++ {
 			multiplexed.Buttons[i] |= state.Buttons[i]
@@ -46,6 +47,7 @@ func multiplexTrust(states map[glfw.Joystick]glfw.GamepadState, multiplexed *glf
 			axesUsed[axis] += 1
 		}
 	}
+	gamestateLock.RUnlock()
 
 	// Joysticks are centered at 0
 	for _, axis := range JOYSTICK_AXES {
@@ -68,12 +70,17 @@ func multiplexTrust(states map[glfw.Joystick]glfw.GamepadState, multiplexed *glf
 	}
 }
 
-func multiplex(rules RulesMap, states map[glfw.Joystick]glfw.GamepadState, multiplexed *glfw.GamepadState) {
+func multiplex(
+	rules RulesMap,
+	states map[glfw.Joystick]glfw.GamepadState,
+	multiplexed *glfw.GamepadState,
+) {
 	// totals to calculate average
 	axesUsed := []float32{0, 0, 0, 0, 0, 0}
-	multiplexed.Axes = [6]float32{0, 0, 0, 0, -1, -1}
+	multiplexed.Axes = [6]float32{0, 0, 0, 0, 0, 0}
 	multiplexed.Buttons = [15]glfw.Action{glfw.Release}
 
+	gamestateLock.RLock()
 	for id, state := range states {
 		if rules[id] == nil {
 			continue
@@ -107,6 +114,7 @@ func multiplex(rules RulesMap, states map[glfw.Joystick]glfw.GamepadState, multi
 			}
 		}
 	}
+	gamestateLock.RUnlock()
 
 	// Joysticks are centered at 0
 	for _, axis := range JOYSTICK_AXES {

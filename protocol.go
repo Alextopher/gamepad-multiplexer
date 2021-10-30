@@ -207,7 +207,7 @@ func ParseRulesMap(bytes []byte) (RulesMap, error) {
 	rules := make(RulesMap)
 
 	for i := 0; i < len(bytes); i++ {
-		joystick := glfw.Joystick(i)
+		joystick := glfw.Joystick(bytes[i])
 		rules[joystick] = make([]MultiplexRule, 0)
 
 		i++
