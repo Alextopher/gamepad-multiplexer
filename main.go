@@ -103,7 +103,7 @@ func main() {
 				}
 			}
 			// Multiplex the states
-			multiplex(conn.Rules[conn.Name], gamepadStates, &multiplexed)
+			multiplex(conn.Rules, gamepadStates, &multiplexed)
 			if cli.Verbose {
 				log.Println(multiplexed)
 			}
@@ -119,7 +119,7 @@ func main() {
 
 			// Send the packet to the server
 			go func() {
-				_, err := conn.UDPConn.Write(pkt.Bytes())
+				_, err := conn.DatagramConn.Write(pkt.Bytes())
 				if err != nil {
 					log.Fatalln("Failed to send packet due to error:", err)
 				}

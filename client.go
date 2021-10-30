@@ -7,12 +7,12 @@ import (
 	"net"
 )
 
-func connect(host string, port uint16, name string) (conn *Connection) {
-	conn = &Connection{
-		Name:    name,
-		TCPConn: nil,
-		UDPConn: nil,
-		Rules:   make(map[string]RulesMap),
+func connect(host string, port uint16, name string) (conn *ClientConn) {
+	conn = &ClientConn{
+		Name:         name,
+		ControlConn:  nil,
+		DatagramConn: nil,
+		Rules:        RulesMap{},
 	}
 	tcpRaddr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", host, port))
 	if err != nil {
@@ -20,13 +20,13 @@ func connect(host string, port uint16, name string) (conn *Connection) {
 	}
 
 	// Connect to the server
-	conn.TCPConn, err = net.DialTCP("tcp", nil, tcpRaddr)
+	conn.ControlConn, err = net.DialTCP("tcp", nil, tcpRaddr)
 	if err != nil {
 		log.Fatalln("Failed to connect with err:", err)
 	}
 
 	// Do the handshake to get the id and config
-	err = conn.ClientHandshake()
+	err = conn.Handshake()
 	if err != nil {
 		log.Fatalln("Handshake failed due to error:", err)
 	}
@@ -38,7 +38,7 @@ func connect(host string, port uint16, name string) (conn *Connection) {
 	}
 
 	// Connect to the server
-	conn.UDPConn, err = net.DialUDP("udp", nil, udpRaddr)
+	conn.DatagramConn, err = net.DialUDP("udp", nil, udpRaddr)
 	if err != nil {
 		log.Fatalln("Failed to connect with err:", err)
 	}
@@ -46,18 +46,18 @@ func connect(host string, port uint16, name string) (conn *Connection) {
 	return conn
 }
 
-func (c *Connection) ClientHandshake() error {
+func (c *ClientConn) Handshake() error {
 	pkt := &ControlProtocol{}
 
 	// Register a name
-	_, err := c.TCPConn.Write(pkt.Register(c.Name))
+	_, err := c.ControlConn.Write(pkt.Register(c.Name))
 	if err != nil {
 		return err
 	}
 
 	// Read in the next packet
 	buf := make([]byte, 512)
-	_, err = c.TCPConn.Read(buf)
+	_, err = c.ControlConn.Read(buf)
 	if err != nil {
 		return err
 	}
@@ -73,17 +73,17 @@ func (c *Connection) ClientHandshake() error {
 		c.Id = pkt.Data[0]
 	} else if pkt.Type == ERROR {
 		// Close the connection since this is wonky
-		c.TCPConn.Close()
+		c.ControlConn.Close()
 		return errors.New(string(pkt.Data))
 	} else {
 		// Close the connection since this is wonky
-		c.TCPConn.Close()
+		c.ControlConn.Close()
 		return errors.New("server response was invalid, aborting connection")
 	}
 
 	// Get the next packet
 	buf = make([]byte, 4096)
-	_, err = c.TCPConn.Read(buf)
+	_, err = c.ControlConn.Read(buf)
 	if err != nil {
 		return err
 	}
@@ -95,17 +95,17 @@ func (c *Connection) ClientHandshake() error {
 	}
 
 	if pkt.Type == CONFIGURATION {
-		c.Rules[c.Name], err = ParseRulesMap(pkt.Data)
+		c.Rules, err = ParseRulesMap(pkt.Data)
 		if err != nil {
 			return err
 		}
 	} else if pkt.Type == ERROR {
 		// Close the connection since this is wonky
-		c.TCPConn.Close()
+		c.ControlConn.Close()
 		return errors.New(string(pkt.Data))
 	} else {
 		// Close the connection since this is wonky
-		c.TCPConn.Close()
+		c.ControlConn.Close()
 		return errors.New("server response was invalid, aborting connection")
 	}
 

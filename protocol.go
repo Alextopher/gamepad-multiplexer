@@ -24,6 +24,8 @@ const (
 	ERROR                 = 255
 )
 
+var GamestatePacketLen = 31
+
 type ControlProtocol struct {
 	Type uint8
 	Len  uint32

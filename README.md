@@ -16,6 +16,12 @@ Work in progress gamepad multiplexer. Allows multiple players to control the sam
 - [x] create a server to receive button presses
 - [x] create a client to send button presses
 - [ ] capture keyboard and mouse inputs but only in window spawned by process
+- [ ] make client use the control socket to send messages
+- [ ] use control socket to close udp connections
+- [ ] timeout on udp connections per socket
+- [ ] validation of data clients send to server
+- [ ] secure connection with DH key exchange followed by AES
+- [ ] initiate cryptographic id in handshake which gets verified by udp listener
 
 ## Valid rules:
 ```

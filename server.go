@@ -5,7 +5,6 @@ import (
 	"github.com/go-gl/glfw/v3.3/glfw"
 	"log"
 	"net"
-	"strings"
 )
 
 func controlError(conn net.Conn, msg string) {
@@ -14,25 +13,26 @@ func controlError(conn net.Conn, msg string) {
 	conn.Close()
 }
 
-func (c *Connection) ServerHandshake() error {
+func (c *ServerConn) Handshake() error {
 	// Create a buffer
 	buf := make([]byte, 1024)
 
 	// Read in data
-	_, err := c.TCPConn.Read(buf)
+	_, err := c.Conn.Read(buf)
 	if err != nil {
-		log.Printf("Failed to read from client %s with error: %s", c.TCPConn.RemoteAddr().String(), err.Error())
+		log.Printf("Failed to read from client %s with error: %s", c.Conn.RemoteAddr().String(),
+			err.Error())
 		return err
 	}
 
 	pkt := &ControlProtocol{}
 	err = pkt.Parse(buf)
 	if err != nil {
-		controlError(c.TCPConn, "Invalid packet, expecting type REGISTER followed by a name")
+		controlError(c.Conn, "Invalid packet, expecting type REGISTER followed by a name")
 		return err
 	}
 	if pkt.Type != REGISTER {
-		controlError(c.TCPConn, "Invalid packet, expecting type REGISTER followed by a name")
+		controlError(c.Conn, "Invalid packet, expecting type REGISTER followed by a name")
 		return err
 	}
 
@@ -42,7 +42,7 @@ func (c *Connection) ServerHandshake() error {
 	// See if it's a valid name
 	if !namePattern.Match(pkt.Data) {
 		// Invalid name, tell them that and die
-		controlError(c.TCPConn, "Invalid name")
+		controlError(c.Conn, "Invalid name")
 		return err
 	}
 
@@ -53,7 +53,7 @@ func (c *Connection) ServerHandshake() error {
 	for _, client := range clients {
 		// Kill the connection if the name already exists
 		if client.Name == name {
-			controlError(c.TCPConn, "Name already taken, please try something else")
+			controlError(c.Conn, "Name already taken, please try something else")
 			// Remember to unlock
 			clientLock.Unlock()
 			return err
@@ -75,11 +75,11 @@ func (c *Connection) ServerHandshake() error {
 	clientLock.Unlock()
 
 	// Tell the client of their id
-	_, err = c.TCPConn.Write(pkt.SetId(c.Id))
+	_, err = c.Conn.Write(pkt.SetId(c.Id))
 	if err != nil {
 		log.Printf(
 			"Could not send packet to client %s due to error: %s\n",
-			c.TCPConn.RemoteAddr().String(),
+			c.Conn.RemoteAddr().String(),
 			err.Error(),
 		)
 		clientLock.Lock()
@@ -92,7 +92,7 @@ func (c *Connection) ServerHandshake() error {
 	joystickRules, exists := c.Rules[name]
 	if !exists {
 		// Tell the client they don't have a configuration
-		controlError(c.TCPConn, "Configuration doesn't exist for name "+name)
+		controlError(c.Conn, "Configuration doesn't exist for name "+name)
 		clientLock.Lock()
 		delete(clients, c.Id)
 		clientLock.Unlock()
@@ -101,13 +101,13 @@ func (c *Connection) ServerHandshake() error {
 
 	// Send over the rules
 	conf := joystickRules.Bytes()
-	_, err = c.TCPConn.Write(pkt.Configure(conf))
+	_, err = c.Conn.Write(pkt.Configure(conf))
 
 	// Complain on error
 	if err != nil {
 		log.Printf(
 			"Could not send packet to client %s due to error: %s\n",
-			c.TCPConn.RemoteAddr().String(),
+			c.Conn.RemoteAddr().String(),
 			err.Error(),
 		)
 		clientLock.Lock()
@@ -120,25 +120,22 @@ func (c *Connection) ServerHandshake() error {
 
 // ControlSocket handles the handshake with the client and continues
 // to listen for messages to the server
-func (c *Connection) ControlSocket(port uint16) {
+func (c *ServerConn) ControlSocket(port uint16) {
 	// Handle the handshake
-	err := c.ServerHandshake()
+	err := c.Handshake()
 	if err != nil {
 		return
 	}
-
-	// Spin off udp server for this client
-	go joystickHandler(c, port)
 
 	pkt := &ControlProtocol{}
 	// Wait for joystick peripheral announcements
 	for {
 		buf := make([]byte, 512)
-		_, err := c.TCPConn.Read(buf)
+		_, err := c.Conn.Read(buf)
 		if err != nil {
 			log.Printf(
 				"Could not read packet from client %s due to error: %s\n",
-				c.TCPConn.RemoteAddr().String(),
+				c.Conn.RemoteAddr().String(),
 				err.Error(),
 			)
 			clientLock.Lock()
@@ -150,7 +147,7 @@ func (c *Connection) ControlSocket(port uint16) {
 		// Parse the packet and complain on failure, but don't close the connection
 		err = pkt.Parse(buf)
 		if err != nil {
-			controlError(c.TCPConn, "Invalid packet")
+			controlError(c.Conn, "Invalid packet")
 			continue
 		}
 
@@ -159,7 +156,7 @@ func (c *Connection) ControlSocket(port uint16) {
 			log.Println(string(pkt.Data))
 		} else if pkt.Type == DONE {
 			// Close the connection, the client said they're done
-			c.TCPConn.Close()
+			c.Conn.Close()
 			clientLock.Lock()
 			delete(clients, c.Id)
 			clientLock.Unlock()
@@ -168,7 +165,58 @@ func (c *Connection) ControlSocket(port uint16) {
 	}
 }
 
+func udpListener(serv net.PacketConn) {
+	counter := make(map[string]uint32)
+	// Make a buffer for the size of the packet we expect
+	for {
+		buf := make([]byte, GamestatePacketLen)
+		// Read in the data
+		_, raddr, err := serv.ReadFrom(buf)
+		if err != nil {
+			log.Fatalf("Failed to read from %s socket due to error: %s", raddr.Network(), err)
+		}
+
+		ip := raddr.String()
+
+		// Parse the packet
+		pkt := &GamestateProtocol{}
+		err = pkt.Parse(buf)
+
+		// If the packet is bad or old just ignore it
+		if err != nil {
+			continue
+		}
+
+		// TODO actually check to make sure this is a real client
+		// See if this client doesn't exist or it's an old packet
+		// if c, exists := counter[ip]; !exists || pkt.PacketId < c {
+		// 	continue
+		// }
+
+		// Make sure the packet isn't old
+		if pkt.PacketId < counter[ip] {
+			continue
+		}
+
+		// Up the packet counter
+		counter[ip] += 1
+
+		// TODO Check client rules to validate client
+		// Multiplex the rules
+		gamepadStates[glfw.Joystick(pkt.JoystickId)] = pkt.GamepadState
+	}
+}
+
 func listen(host string, port uint16, rules ClientsMap) {
+	// Create the global UDP listener to handle all clients
+	udpServ, err := net.ListenPacket("udp", fmt.Sprintf("%s:%d", host, port))
+	if err != nil {
+		log.Fatalf("Failed to open socket %s:%d due to error: %s\n", host, port, err.Error())
+	}
+
+	// Handle UDP connections
+	go udpListener(udpServ)
+
 	// Create the TCP listener to make the controlSocket with all clients
 	serv, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, port))
 	if err != nil {
@@ -182,62 +230,11 @@ func listen(host string, port uint16, rules ClientsMap) {
 			log.Fatalln("Failed to accept client due to error:", err)
 		}
 		// Create the client
-		client := Connection{
-			TCPConn: conn,
-			Rules:   rules,
+		client := ServerConn{
+			Conn:  conn,
+			Rules: rules,
 		}
 		// Handle the controlSocket and die if it's bad
 		go client.ControlSocket(port)
-	}
-}
-
-func joystickHandler(conn *Connection, port uint16) {
-	// Create the counter map
-	counter := make(map[string]uint32)
-
-	// Create the listener
-	ip := strings.Split(conn.TCPConn.RemoteAddr().String(), ":")[0]
-	servAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", ip, port))
-	if err != nil {
-		log.Fatalln("Could not create server due to error:", err)
-	}
-	conn.UDPConn, err = net.ListenUDP("udp", servAddr)
-	if err != nil {
-		log.Fatalln("Could not create server due to error:", err)
-	}
-
-	// Accept connections as they come in
-	for {
-		// Create a buffer
-		buf := make([]byte, 31)
-
-		// Read in the data from the packet
-		_, raddr, err := conn.UDPConn.ReadFromUDP(buf)
-		if err != nil {
-			log.Println(err)
-		}
-
-		// Get the IP of the remote host
-		ip := raddr.IP.String()
-
-		pkt := GamestateProtocol{}
-		err = pkt.Parse(buf)
-		if err != nil {
-			log.Printf("Bad packet received from %s with contents '%x'", ip, buf)
-		}
-
-		// See if a counter exists for this ip
-		if count, exists := counter[ip]; exists {
-			// Bump up the packet id since this is newer, drop the packet otherwise
-			if count < pkt.PacketId {
-				count = pkt.PacketId
-			}
-		} else {
-			counter[ip] = pkt.PacketId
-		}
-
-		// Update the game states in the map
-		// Possibly unsafe?
-		gamepadStates[glfw.Joystick(pkt.JoystickId)] = pkt.GamepadState
 	}
 }
