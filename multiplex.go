@@ -26,11 +26,24 @@ func multiplexTrust(states map[glfw.Joystick]glfw.GamepadState, multiplexed *glf
 			multiplexed.Buttons[i] |= state.Buttons[i]
 		}
 
-		for i := 0; i < len(multiplexed.Axes); i++ {
-			if abs32(state.Axes[i]) > STICK_DEADZONE {
-				multiplexed.Axes[i] += state.Axes[i]
-				axesUsed[i] += 1
+		// Joysticks are centered at 0
+		for _, axis := range JOYSTICK_AXES {
+			// Joysticks rest at 0
+			if abs32(state.Axes[axis]) > STICK_DEADZONE {
+				multiplexed.Axes[axis] += state.Axes[axis]
+				axesUsed[axis] += 1
 			}
+		}
+
+		// Triggers are centered at -1
+		for _, axis := range TRIGGER_AXES {
+			// Triggers rest at -1
+			if state.Axes[axis] > -1+TRIGGER_DEADZONE {
+				multiplexed.Axes[axis] += state.Axes[axis]
+			} else {
+				multiplexed.Axes[axis] += -1
+			}
+			axesUsed[axis] += 1
 		}
 	}
 
