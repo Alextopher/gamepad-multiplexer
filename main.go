@@ -46,10 +46,6 @@ func main() {
 				log.Println(multiplexed)
 			}
 
-			// DEBUG
-			time.Sleep(Interval)
-			continue
-
 			// Button events
 			for i := 0; i < len(multiplexed.Buttons); i++ {
 				button := glfw.GamepadButton(i)
